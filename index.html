@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор зарплаты</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+  :root {
+    --bg: #f5efe6;
+    --card: #ffffff;
+    --ink: #14110d;
+    --muted: #8a8178;
+    --line: #e8e0d2;
+    --accent: #ff5b2e;
+    --green: #1f8a5b;
+    --soft: #faf6ef;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    z-index: 0;
+    pointer-events: none;
+  }
+  body::before {
+    width: 420px; height: 420px;
+    background: rgba(255, 91, 46, 0.14);
+    top: -120px; right: -120px;
+  }
+  body::after {
+    width: 520px; height: 520px;
+    background: rgba(255, 203, 71, 0.20);
+    bottom: -220px; left: -160px;
+  }
+
+  .card {
+    position: relative;
+    z-index: 1;
+    background: var(--card);
+    border-radius: 28px;
+    width: 100%;
+    max-width: 780px;
+    padding: 38px 42px 42px;
+    border: 1px solid rgba(20, 17, 13, 0.06);
+    box-shadow:
+      0 1px 0 #ffffff inset,
+      0 1px 2px rgba(20, 17, 13, 0.04),
+      0 30px 60px -20px rgba(20, 17, 13, 0.18);
+    animation: cardIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ===== Шапка ===== */
+  .header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 32px;
+  }
+
+  h1 {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1.4px;
+    line-height: 1.05;
+    text-align: center;
+  }
+
+  h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  /* ===== Layout ===== */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 250px;
+    gap: 32px;
+    align-items: stretch;
+  }
+
+  .fields {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.9px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    padding: 15px 16px;
+    font-size: 18px;
+    font-weight: 600;
+    font-family: inherit;
+    background: var(--soft);
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .input-wrap.has-suffix input { padding-right: 46px; }
+
+  input[type="number"]::placeholder { color: #c9bfae; font-weight: 500; }
+  input[type="number"]:hover { border-color: #d8cdb8; }
+
+  input[type="number"]:focus {
+    border-color: var(--accent);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(255, 91, 46, 0.13);
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; }
+
+  .input-suffix {
+    position: absolute;
+    right: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  /* ===== Визуализация ===== */
+  .viz {
+    background: var(--soft);
+    border-radius: 20px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    border: 1px solid var(--line);
+  }
+
+  .viz-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .viz-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .viz-percent {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.8px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16px, 1fr));
+    gap: 7px;
+    align-content: start;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .dot {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px solid #ddd3c2;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .dot.filled {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(255, 91, 46, 0.35);
+    transform: scale(1.08);
+  }
+
+  .viz-foot {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+
+  .viz-foot strong { color: var(--ink); font-weight: 700; }
+
+  /* ===== Результат ===== */
+  .result {
+    margin-top: 32px;
+    padding-top: 28px;
+    border-top: 1.5px dashed var(--line);
+  }
+
+  .result-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .result-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .result-chip {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--green);
+    background: rgba(31, 138, 91, 0.1);
+    padding: 5px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  .result-chip.done { color: #fff; background: var(--green); }
+
+  .result-amount {
+    font-size: 68px;
+    font-weight: 900;
+    letter-spacing: -3.5px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.35s;
+  }
+
+  .result-amount .currency {
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: -1px;
+    margin-left: 8px;
+    vertical-align: 10px;
+  }
+
+  .result-amount.celebrate { color: var(--accent); }
+  .result-amount.celebrate .currency { color: var(--accent); opacity: 0.6; }
+
+  .breakdown {
+    display: flex;
+    gap: 10px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 12px 14px;
+    background: var(--soft);
+    border-radius: 13px;
+    border: 1px solid var(--line);
+    flex: 1;
+    min-width: 130px;
+  }
+
+  .chip-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .chip-value {
+    font-size: 17px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chip-value.muted { color: var(--muted); }
+  .chip-value.negative { color: #d94a2c; }
+
+  /* ===== Ошибка ===== */
+  .error {
+    font-size: 12px;
+    font-weight: 600;
+    color: #d94a2c;
+    text-align: center;
+    margin-top: 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    min-height: 0;
+  }
+
+  .error.show { opacity: 1; min-height: 16px; }
+
+  /* ===== Мобильная версия ===== */
+  @media (max-width: 720px) {
+    .card { padding: 28px 22px 32px; border-radius: 22px; }
+    h1 { font-size: 27px; letter-spacing: -1px; }
+    .layout { grid-template-columns: 1fr; gap: 18px; }
+    .viz { padding: 15px; }
+    .dots { grid-template-columns: repeat(auto-fill, minmax(14px, 1fr)); gap: 6px; }
+    .result-amount { font-size: 48px; letter-spacing: -2px; }
+    .result-amount .currency { font-size: 24px; vertical-align: 6px; }
+    .chip { min-width: 100px; padding: 10px 12px; }
+    .chip-value { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Шапка без значка рубля -->
+  <div class="header">
+    <h1>Сколько <em>придёт?</em></h1>
+  </div>
+
+  <div class="layout">
+    <div class="fields">
+      <div class="field">
+        <label>Смен отработано</label>
+        <div class="input-wrap">
+          <input type="number" id="worked" min="0" step="1" placeholder="0" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field">
+        <label>Рабочих смен в месяце</label>
+        <div class="input-wrap">
+          <input type="number" id="total" min="0" step="1" placeholder="0" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field">
+        <label>ЗП до вычета</label>
+        <div class="input-wrap has-suffix">
+          <input type="number" id="salary" min="0" step="0.01" placeholder="0" inputmode="decimal">
+          <span class="input-suffix">₽</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="viz">
+      <div class="viz-head">
+        <span class="viz-label">Прогресс</span>
+        <span class="viz-percent" id="vizPercent">0%</span>
+      </div>
+      <div class="dots" id="dots"></div>
+      <div class="viz-foot"><strong id="vizWorked">0</strong> из <strong id="vizTotal">0</strong> смен</div>
+    </div>
+  </div>
+
+  <div class="result">
+    <div class="result-head">
+      <span class="result-label">К выплате</span>
+      <span class="result-chip" id="resultChip">—</span>
+    </div>
+    <div class="result-amount" id="resultAmount">
+      <span id="amountValue">0</span><span class="currency">₽</span>
+    </div>
+    <div class="breakdown">
+      <div class="chip">
+        <span class="chip-label">НДФЛ 13%</span>
+        <span class="chip-value negative" id="chipTax">—</span>
+      </div>
+      <div class="chip">
+        <span class="chip-label">На руки за месяц</span>
+        <span class="chip-value" id="chipNet">—</span>
+      </div>
+      <div class="chip">
+        <span class="chip-label">Ставка за смену</span>
+        <span class="chip-value muted" id="chipPerShift">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="error" id="error"></div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const workedEl = $('worked'), totalEl = $('total'), salaryEl = $('salary');
+  const errorEl = $('error'), dotsEl = $('dots'), vizPercent = $('vizPercent');
+  const vizWorked = $('vizWorked'), vizTotal = $('vizTotal'), resultAmount = $('resultAmount');
+  const amountValue = $('amountValue'), resultChip = $('resultChip');
+  const chipTax = $('chipTax'), chipNet = $('chipNet'), chipPerShift = $('chipPerShift');
+
+  const TAX_RATE = 0.13, DASH = '—';
+  let animationFrame = null, lastAmount = 0;
+
+  const fmt = num => num.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+
+  function renderDots(total, worked) {
+    if (!total || total <= 0 || total > 120) { dotsEl.innerHTML = ''; return; }
+    if (dotsEl.children.length !== total) {
+      dotsEl.innerHTML = '';
+      for (let i = 0; i < total; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot';
+        dotsEl.appendChild(d);
+      }
+    }
+    const dots = dotsEl.children;
+    for (let i = 0; i < dots.length; i++) {
+      dots[i].classList.toggle('filled', i < worked);
+    }
+  }
+
+  function animateNumber(from, to) {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    const duration = 550, start = performance.now();
+    function step(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const value = from + (to - from) * eased;
+      amountValue.textContent = fmt(value);
+      if (t < 1) animationFrame = requestAnimationFrame(step);
+    }
+    animationFrame = requestAnimationFrame(step);
+    lastAmount = to;
+  }
+
+  function calculate() {
+    errorEl.textContent = '';
+    errorEl.classList.remove('show');
+    const worked = parseFloat(workedEl.value), total = parseFloat(totalEl.value), gross = parseFloat(salaryEl.value);
+    const hasWorked = workedEl.value !== '' && !isNaN(worked);
+    const hasTotal = totalEl.value !== '' && !isNaN(total);
+    const hasSalary = salaryEl.value !== '' && !isNaN(gross);
+
+    if (hasTotal && total <= 0) { errorEl.textContent = 'Рабочих смен должно быть больше 0'; errorEl.classList.add('show'); }
+    if (hasWorked && hasTotal && worked > total) { errorEl.textContent = 'Отработанных смен не может быть больше рабочих'; errorEl.classList.add('show'); }
+
+    const safeTotal = hasTotal && total > 0 ? Math.floor(total) : 0;
+    const safeWorked = hasWorked && worked > 0 ? Math.min(Math.floor(worked), safeTotal) : 0;
+
+    renderDots(safeTotal, safeWorked);
+    const percent = safeTotal > 0 ? Math.min((safeWorked / safeTotal) * 100, 100) : 0;
+    
+    vizPercent.textContent = Math.round(percent) + '%';
+    vizWorked.textContent = safeWorked;
+    vizTotal.textContent = safeTotal;
+
+    const isComplete = percent >= 100 && safeTotal > 0;
+    resultAmount.classList.toggle('celebrate', isComplete);
+    resultChip.classList.toggle('done', isComplete);
+
+    if (!hasWorked || !hasTotal || !hasSalary || total <= 0) {
+      if (lastAmount !== 0) animateNumber(lastAmount, 0);
+      resultChip.textContent = DASH;
+      resultChip.classList.remove('done');
+      chipTax.textContent = DASH; chipNet.textContent = DASH; chipPerShift.textContent = DASH;
+      return;
+    }
+
+    const tax = gross * TAX_RATE, net = gross - tax, perShift = net / total, finalSalary = perShift * safeWorked;
+    animateNumber(lastAmount, finalSalary);
+
+    resultChip.textContent = isComplete ? '🎉 полный месяц' : safeWorked + ' из ' + safeTotal + ' смен';
+    chipTax.textContent = '−' + fmt(tax) + ' ₽';
+    chipNet.textContent = fmt(net) + ' ₽';
+    chipPerShift.textContent = fmt(perShift) + ' ₽';
+  }
+
+  [workedEl, totalEl, salaryEl].forEach(el => el.addEventListener('input', calculate));
+</script>
+
+</body>
+</html>
