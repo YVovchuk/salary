@@ -164,6 +164,15 @@
     pointer-events: none;
   }
 
+  /* Поле «ЗП до вычета» прячется, пока не в фокусе */
+  input.secret {
+    transition: filter 0.3s ease, border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+  input.secret.has-value:not(:focus) {
+    filter: blur(6px);
+    cursor: pointer;
+  }
+
   /* ===== Визуализация ===== */
   .viz {
     background: var(--soft);
@@ -318,10 +327,100 @@
     font-size: 17px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .chip-value.muted { color: var(--muted); }
   .chip-value.negative { color: #d94a2c; }
+
+  /* ===== Спойлеры «как в банке» ===== */
+
+  /* Иконка-глаз */
+  .eye {
+    width: 15px;
+    height: 15px;
+    color: var(--muted);
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s, color 0.2s;
+  }
+  .spoiler:hover .eye { opacity: 1; color: var(--ink); }
+  .spoiler .eye-closed { display: none; }
+  .spoiler.revealed .eye-open { display: none; }
+  .spoiler.revealed .eye-closed { display: block; }
+
+  /* Чипы */
+  .chip.spoiler {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.2s, background 0.2s, transform 0.12s;
+  }
+  .chip.spoiler:hover { border-color: #d8cdb8; background: #ffffff; }
+  .chip.spoiler:active { transform: scale(0.985); }
+  .chip.spoiler:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(255, 91, 46, 0.13);
+  }
+
+  .chip-value-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .chip.spoiler .chip-value {
+    filter: blur(5.5px);
+    opacity: 0.65;
+    transition: filter 0.35s ease, opacity 0.35s ease;
+  }
+  .chip.spoiler.revealed .chip-value { filter: none; opacity: 1; }
+
+  .chip.spoiler.empty { cursor: default; }
+  .chip.spoiler.empty:active { transform: none; }
+  .chip.spoiler.empty .chip-value { filter: none; opacity: 1; }
+  .chip.spoiler.empty .eye { opacity: 0.25; }
+
+  /* Крупная сумма «К выплате» */
+  .result-amount.spoiler {
+    position: relative;
+    padding-right: 44px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .result-amount #amountValue,
+  .result-amount .currency {
+    transition: filter 0.35s ease, opacity 0.35s ease;
+  }
+  .result-amount.spoiler:not(.revealed) #amountValue,
+  .result-amount.spoiler:not(.revealed) .currency {
+    filter: blur(12px);
+    opacity: 0.6;
+  }
+  .result-amount.spoiler.empty { cursor: default; }
+  .result-amount.spoiler.empty #amountValue,
+  .result-amount.spoiler.empty .currency { filter: none; opacity: 1; }
+  .result-amount.spoiler:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 6px;
+    border-radius: 8px;
+  }
+  .result-amount .amount-eye {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    color: var(--muted);
+    opacity: 0.4;
+    transition: opacity 0.2s, color 0.2s;
+  }
+  .result-amount.spoiler:hover .amount-eye { opacity: 0.85; color: var(--ink); }
+  .result-amount.spoiler.empty .amount-eye { opacity: 0.18; }
 
   /* ===== Ошибка ===== */
   .error {
@@ -344,8 +443,9 @@
     .layout { grid-template-columns: 1fr; gap: 18px; }
     .viz { padding: 15px; }
     .dots { grid-template-columns: repeat(auto-fill, minmax(14px, 1fr)); gap: 6px; }
-    .result-amount { font-size: 48px; letter-spacing: -2px; }
+    .result-amount { font-size: 48px; letter-spacing: -2px; padding-right: 34px; }
     .result-amount .currency { font-size: 24px; vertical-align: 6px; }
+    .result-amount .amount-eye { width: 20px; height: 20px; }
     .chip { min-width: 100px; padding: 10px 12px; }
     .chip-value { font-size: 15px; }
   }
@@ -376,7 +476,7 @@
       <div class="field">
         <label>ЗП до вычета</label>
         <div class="input-wrap has-suffix">
-          <input type="number" id="salary" min="0" step="0.01" placeholder="0" inputmode="decimal">
+          <input type="number" id="salary" class="secret" min="0" step="0.01" placeholder="0" inputmode="decimal">
           <span class="input-suffix">₽</span>
         </div>
       </div>
@@ -397,21 +497,92 @@
       <span class="result-label">К выплате</span>
       <span class="result-chip" id="resultChip">—</span>
     </div>
-    <div class="result-amount" id="resultAmount">
+
+    <!-- Спойлер: крупная сумма -->
+    <div class="result-amount spoiler empty" id="resultAmount"
+         role="button" tabindex="0" aria-expanded="false"
+         aria-label="Показать сумму к выплате"
+         title="Нажмите, чтобы показать или скрыть">
       <span id="amountValue">0</span><span class="currency">₽</span>
+      <svg class="eye amount-eye eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      <svg class="eye amount-eye eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+        <line x1="1" y1="1" x2="23" y2="23"/>
+      </svg>
     </div>
+
     <div class="breakdown">
-      <div class="chip">
+      <!-- НДФЛ -->
+      <div class="chip spoiler empty" id="chipTaxWrap"
+           role="button" tabindex="0" aria-expanded="false"
+           aria-label="Показать НДФЛ" title="Нажмите, чтобы показать или скрыть">
         <span class="chip-label">НДФЛ 13%</span>
-        <span class="chip-value negative" id="chipTax">—</span>
+        <span class="chip-value-row">
+          <span class="chip-value negative" id="chipTax">—</span>
+          <svg class="eye eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <svg class="eye eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+            <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </span>
       </div>
-      <div class="chip">
+
+      <!-- На руки за месяц -->
+      <div class="chip spoiler empty" id="chipNetWrap"
+           role="button" tabindex="0" aria-expanded="false"
+           aria-label="Показать сумму на руки за месяц" title="Нажмите, чтобы показать или скрыть">
         <span class="chip-label">На руки за месяц</span>
-        <span class="chip-value" id="chipNet">—</span>
+        <span class="chip-value-row">
+          <span class="chip-value" id="chipNet">—</span>
+          <svg class="eye eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <svg class="eye eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+            <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </span>
       </div>
-      <div class="chip">
+
+      <!-- Ставка за смену -->
+      <div class="chip spoiler empty" id="chipPerShiftWrap"
+           role="button" tabindex="0" aria-expanded="false"
+           aria-label="Показать ставку за смену" title="Нажмите, чтобы показать или скрыть">
         <span class="chip-label">Ставка за смену</span>
-        <span class="chip-value muted" id="chipPerShift">—</span>
+        <span class="chip-value-row">
+          <span class="chip-value muted" id="chipPerShift">—</span>
+          <svg class="eye eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <svg class="eye eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+            <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </span>
       </div>
     </div>
   </div>
@@ -426,11 +597,28 @@
   const vizWorked = $('vizWorked'), vizTotal = $('vizTotal'), resultAmount = $('resultAmount');
   const amountValue = $('amountValue'), resultChip = $('resultChip');
   const chipTax = $('chipTax'), chipNet = $('chipNet'), chipPerShift = $('chipPerShift');
+  const chipTaxWrap = $('chipTaxWrap'), chipNetWrap = $('chipNetWrap'), chipPerShiftWrap = $('chipPerShiftWrap');
 
   const TAX_RATE = 0.13, DASH = '—';
   let animationFrame = null, lastAmount = 0;
 
   const fmt = num => num.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+
+  /* ===== Спойлеры: клик / Enter / Space ===== */
+  document.querySelectorAll('.spoiler').forEach(el => {
+    const toggle = () => {
+      if (el.classList.contains('empty')) return;
+      const revealed = el.classList.toggle('revealed');
+      el.setAttribute('aria-expanded', revealed ? 'true' : 'false');
+    };
+    el.addEventListener('click', toggle);
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle();
+      }
+    });
+  });
 
   function renderDots(total, worked) {
     if (!total || total <= 0 || total > 120) { dotsEl.innerHTML = ''; return; }
@@ -470,6 +658,9 @@
     const hasTotal = totalEl.value !== '' && !isNaN(total);
     const hasSalary = salaryEl.value !== '' && !isNaN(gross);
 
+    // Прячем поле «ЗП до вычета», только когда в нём есть значение и оно не в фокусе
+    salaryEl.classList.toggle('has-value', salaryEl.value !== '');
+
     if (hasTotal && total <= 0) { errorEl.textContent = 'Рабочих смен должно быть больше 0'; errorEl.classList.add('show'); }
     if (hasWorked && hasTotal && worked > total) { errorEl.textContent = 'Отработанных смен не может быть больше рабочих'; errorEl.classList.add('show'); }
 
@@ -478,7 +669,7 @@
 
     renderDots(safeTotal, safeWorked);
     const percent = safeTotal > 0 ? Math.min((safeWorked / safeTotal) * 100, 100) : 0;
-    
+
     vizPercent.textContent = Math.round(percent) + '%';
     vizWorked.textContent = safeWorked;
     vizTotal.textContent = safeTotal;
@@ -487,7 +678,13 @@
     resultAmount.classList.toggle('celebrate', isComplete);
     resultChip.classList.toggle('done', isComplete);
 
-    if (!hasWorked || !hasTotal || !hasSalary || total <= 0) {
+    const isEmpty = !hasWorked || !hasTotal || !hasSalary || total <= 0;
+    resultAmount.classList.toggle('empty', isEmpty);
+    chipTaxWrap.classList.toggle('empty', isEmpty);
+    chipNetWrap.classList.toggle('empty', isEmpty);
+    chipPerShiftWrap.classList.toggle('empty', isEmpty);
+
+    if (isEmpty) {
       if (lastAmount !== 0) animateNumber(lastAmount, 0);
       resultChip.textContent = DASH;
       resultChip.classList.remove('done');
@@ -505,6 +702,7 @@
   }
 
   [workedEl, totalEl, salaryEl].forEach(el => el.addEventListener('input', calculate));
+  calculate();
 </script>
 
 </body>
